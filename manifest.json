@@ -1,5 +1,5 @@
 {
-	"id": "obsidian-execute-python",
+	"id": "execute-python",
 	"name": "Execute Python",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",

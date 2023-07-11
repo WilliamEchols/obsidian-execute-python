@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-execute-python",
+	"name": "execute-python",
 	"version": "1.0.0",
 	"description": "lightweight Python code snippet executor with runtime input support",
 	"main": "main.js",
