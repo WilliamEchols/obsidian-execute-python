@@ -17,9 +17,11 @@ A lightweight plugin for the execution of Python code snippets embedded in [Obsi
 2. Enable the plugin in the Obsidian settings.
 3. Open or create a note and write a Python code block. A Python code block is any text enclosed in a pair of three back-ticks with the word 'python' after the first set, like this:
     
-\```python
+````markdown
+```python
 print("Hello, World!")
-\```
+```
+````
     
 4. Click 'Start' to run the Python code in the associated code block.
 5. The output of your code will be displayed in the same block. If your code requires an input, enter it in the input box when prompted and press 'Submit Input' or the Enter key.
@@ -42,60 +44,72 @@ You can modify the following settings in the Obsidian settings tab:
 - Make sure the Python executable is in your system's PATH. The plugin uses the name of the Python executable specified in the settings to find and run Python.
 - The '#noinput' directive can be included in your Python code block to hide the input box and the 'Submit Input' button for that specific code block. The '#noinput' directive will not be displayed in the markdown preview. For example:
     
-\```python
+````markdown
+```python
 #noinput
 x = 1
 print(x+1)
-\```
+```
+````
 
 ## More Examples
 
 ### Printing Example w/ \#noinput
 
-\```python
+````markdown
+```python
 #noinput
 print("Hello, World!")
 print("Line 2")
-\```
+```
+````
 
 ------------
 
 ### Basic Variables
 
-\```python
+````markdown
+```python
 #noinput
 x = 2
 print(x + 1)
 print(x)
-\```
+```
+````
 
 ------------
 
 ## Multiple Inputs w/ updates in-between
 
-\```python
+````markdown
+```python
 name = input("name: ")
 print("\nentered name")
 color = input("color: ")
 print(f"\n{name} likes the color {color}")
-\```
+```
+````
 
 ------------
 
 ## Loop with Input
 
-\```python
+````markdown
+```python
 num_over_10 = 0
 while (num_over_10 <= 10):
 	num_over_10 = int(input("enter num: \n"))
 print(f"{num_over_10} > 10")
-\```
+```
+````
 
 ------------
 
 ## Variables are block dependent (this will cause an error)
 
-\```python
+````markdown
+```python
 #noinput
 print(x)
-\```
+```
+````
