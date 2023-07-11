@@ -1,137 +1,200 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-
-// Remember to rename these classes and interfaces!
+import { Plugin, MarkdownPostProcessorContext, MarkdownView, Notice, PluginSettingTab, App, Setting } from 'obsidian';
+import * as child_process from 'child_process';
 
 interface MyPluginSettings {
-	mySetting: string;
+    pythonPath: string;
+    showCodeInPreview: boolean;
+    showExitCode: boolean;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+    pythonPath: 'python',
+    showCodeInPreview: true,
+    showExitCode: false
 }
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+    settings: MyPluginSettings;
 
-	async onload() {
-		await this.loadSettings();
+    async onload() {
+        await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+        this.addSettingTab(new MyPluginSettingTab(this.app, this));
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+        this.registerMarkdownCodeBlockProcessor('python', this.processPythonCodeBlock.bind(this));
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+        this.registerEvent(
+            this.app.workspace.on('markdown-preview-render', this.addRunButtons.bind(this))
+        );
+    }
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
+    processPythonCodeBlock(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
+        let noInput = source.includes("#noinput");
+	source = source.replace("#noinput\n", "");
+	source = source.replace("#noinput", "");        
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+	if (this.settings.showCodeInPreview) {
+            let codeBlock = el.createEl('pre');
+            codeBlock.innerHTML = `<code class="language-python">${source}</code>`;
+        }
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+        const outputArea = el.createEl('div', { cls: 'python-output', attr: {style: 'white-space: pre-wrap;'} });
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
+        this.runPythonCode(source, outputArea, noInput);
+    }
 
-	onunload() {
+    addRunButtons(mdView: MarkdownView, el: HTMLElement) {
+        el.querySelectorAll('pre.language-python').forEach((block: HTMLPreElement) => {
+            let noInput = block.textContent.includes("#noinput");
+            if (this.settings.showCodeInPreview) {
+                let codeBlock = block.createEl('pre');
+                codeBlock.innerHTML = block.innerHTML;
+            }
+            
+            const source = block.querySelector('code')?.textContent || '';
+            const outputArea = block.createEl('div', { cls: 'python-output', attr: {style: 'white-space: pre-wrap;'} });
 
-	}
+            this.runPythonCode(source, outputArea, noInput);
+        });
+    }
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
+    async runPythonCode(source: string, outputArea: HTMLElement, noInput: boolean = false) {
+        outputArea.innerHTML = '';  // Clear the output area before each run
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+        let inputField;
+        let submitButton;
+        if (!noInput) {
+            inputField = outputArea.createEl('input', { attr: {type: 'text'} });
+            submitButton = outputArea.createEl('button', { text: 'Submit Input' });
+        }
+        let runButton = outputArea.createEl('button', { text: 'Start' });
+        let resetButton = outputArea.createEl('button', { text: 'Reset' });
+        let outputPre = null;
+        
+        let pythonProcess: child_process.ChildProcessWithoutNullStreams;
+        let handleOutput: Promise<void>;
+
+        const reset = () => {
+            pythonProcess && pythonProcess.kill();
+            inputField && (inputField.value = '');
+            outputPre && outputArea.removeChild(outputPre);
+            outputPre = null;
+        };
+
+        const run = async () => {
+            pythonProcess = child_process.spawn(this.settings.pythonPath, ['-u', '-c', source]);
+
+            const submitInput = () => {
+                pythonProcess.stdin.write(inputField.value + "\n");
+                inputField.value = '';
+            };
+
+            if (!noInput) {
+                submitButton.addEventListener('click', submitInput);
+                inputField.addEventListener('keyup', (event) => {
+                    if (event.key === 'Enter') {
+                        submitInput();
+                    }
+                });
+            }
+
+            handleOutput = new Promise((resolve, reject) => {
+                pythonProcess.stdout.on('data', (data) => {
+                    if (!outputPre) {
+                        outputPre = outputArea.createEl('pre');
+                    }
+                    outputPre.append(data.toString());
+                });
+
+                pythonProcess.stderr.on('data', (data) => {
+                    if (!outputPre) {
+                        outputPre = outputArea.createEl('pre');
+                    }
+                    outputPre.append(`Error: ${data}`);
+                });
+
+                pythonProcess.on('close', (code) => {
+                    if (this.settings.showExitCode) {
+                        if (!outputPre) {
+                            outputPre = outputArea.createEl('pre');
+                        }
+                        outputPre.append(`\nPython exited with code: ${code}`);
+                    }
+                    resolve();
+                });
+
+                pythonProcess.on('error', (err) => {
+                    reject(err);
+                });
+            });
+
+            try {
+                await handleOutput;
+            } catch (err) {
+                if (!outputPre) {
+                    outputPre = outputArea.createEl('pre');
+                }
+                outputPre.append(`\nAn error occurred: ${err}`);
+            }
+        };
+
+        runButton.addEventListener('click', run);
+        resetButton.addEventListener('click', reset);
+    }
+
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
+    }
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class MyPluginSettingTab extends PluginSettingTab {
+    plugin: MyPlugin;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
+    constructor(app: App, plugin: MyPlugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
+    display(): void {
+        let {containerEl} = this;
+
+        containerEl.empty();
+
+        containerEl.createEl('h2', {text: 'Execute Python Settings'});
+
+        new Setting(containerEl)
+            .setName('Python')
+            .setDesc('The command used to invoke Python on your system. (ex. python or python3)')
+            .addText(text => text
+                .setValue(this.plugin.settings.pythonPath)
+                .onChange(async (value) => {
+                    this.plugin.settings.pythonPath = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Toggle code snippet')
+            .setDesc('Always show or hide Python code in the markdown preview.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showCodeInPreview)
+                .onChange(async (value) => {
+                    this.plugin.settings.showCodeInPreview = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Show exit code')
+            .setDesc('Toggle whether to show the exit code message after code execution.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showExitCode)
+                .onChange(async (value) => {
+                    this.plugin.settings.showExitCode = value;
+                    await this.plugin.saveSettings();
+                }));
+    }
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}

@@ -1,95 +1,101 @@
-# Obsidian Sample Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+# Python Code Executor for Obsidian
+## obsidian-execute-python
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+A lightweight plugin for the execution of Python code snippets embedded in [Obsidian](https://obsidian.md/) notes with runtime inputs. More detailed examples are provided at the end.
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Run Python Code Blocks**: Simply write your Python code in a markdown code block, and click the 'Start' button that appears in the preview mode. The code block will be executed and the output will be displayed in the same block.
+- **Live Python Console**: Each Python code block functions as a live Python console. You can enter inputs in the input box and submit them by pressing the 'Submit Input' button or the Enter key. The input will be passed to the Python code and the result will be displayed. This process occurs during code execution, allowing conditional or loop inputs.
+- **Control over Displayed Elements**: You can choose to hide the code snippets, the input box, and the exit code message.
+- **Support for Different Python Versions**: You can specify the name of your Python executable (such as 'python' or 'python3') in the settings.
 
-## First time developing plugins?
+## How to Use
 
-Quick starting guide for new plugin devs:
+1. Install obsidian-execute-python from the Obsidian community plugins page.
+2. Enable the plugin in the Obsidian settings.
+3. Open or create a note and write a Python code block. A Python code block is any text enclosed in a pair of three back-ticks with the word 'python' after the first set, like this:
+    
+\```python
+print("Hello, World!")
+\```
+    
+4. Click 'Start' to run the Python code in the associated code block.
+5. The output of your code will be displayed in the same block. If your code requires an input, enter it in the input box when prompted and press 'Submit Input' or the Enter key.
+6. Code snippets can be rerun by pressing the 'Start' button again. To clear the output and the input field, click the 'Reset' button.
+7. To modify the settings of the plugin, navigate to the settings tab of the plugin in Obsidian settings. The settings options are below.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Settings
 
-## Releasing new releases
+You can modify the following settings in the Obsidian settings tab:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- **Python Executable Name**: Specify the name of your Python executable. This is usually 'python' or 'python3'.
+- **Show Python Code in Preview**: Toggle whether to show or hide Python code in the markdown preview.
+- **Show Python Exit Code**: Toggle whether to display the exit code message after running Python code.
+- **Show Input Box**: This can be set on a per-block basis using a "#noinput" comment anywhere in the code block.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Note
 
-## Adding your plugin to the community plugin list
+- **Be careful of arbitrary code execution and do not execute any code you are not familiar with**
+- The plugin creates a new Python process for each code block. Be careful with long-running or resource-intensive code as it could affect Obsidian's performance.
+- Make sure the Python executable is in your system's PATH. The plugin uses the name of the Python executable specified in the settings to find and run Python.
+- The '#noinput' directive can be included in your Python code block to hide the input box and the 'Submit Input' button for that specific code block. The '#noinput' directive will not be displayed in the markdown preview. For example:
+    
+\```python
+#noinput
+x = 1
+print(x+1)
+\```
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+## More Examples
 
-## How to use
+### Printing Example w/ \#noinput
 
-- Clone this repo.
-- `npm i` or `yarn` to install dependencies
-- `npm run dev` to start compilation in watch mode.
+\```python
+#noinput
+print("Hello, World!")
+print("Line 2")
+\```
 
-## Manually installing the plugin
+------------
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+### Basic Variables
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+\```python
+#noinput
+x = 2
+print(x + 1)
+print(x)
+\```
 
-## Funding URL
+------------
 
-You can include funding URLs where people who use your plugin can financially support it.
+## Multiple Inputs w/ updates in-between
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+\```python
+name = input("name: ")
+print("\nentered name")
+color = input("color: ")
+print(f"\n{name} likes the color {color}")
+\```
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+------------
 
-If you have multiple URLs, you can also do:
+## Loop with Input
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+\```python
+num_over_10 = 0
+while (num_over_10 <= 10):
+	num_over_10 = int(input("enter num: \n"))
+print(f"{num_over_10} > 10")
+\```
 
-## API Documentation
+------------
 
-See https://github.com/obsidianmd/obsidian-api
+## Variables are block dependent (this will cause an error)
+
+\```python
+#noinput
+print(x)
+\```
