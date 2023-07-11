@@ -6,6 +6,5 @@
 	"description": "lightweight Python code snippet executor with runtime input support",
 	"author": "williamechols",
 	"authorUrl": "https://williamechols.com",
-	"fundingUrl": "",
 	"isDesktopOnly": true
 }

@@ -1,20 +1,20 @@
 import { Plugin, MarkdownPostProcessorContext, MarkdownView, Notice, PluginSettingTab, App, Setting } from 'obsidian';
 import * as child_process from 'child_process';
 
-interface MyPluginSettings {
+interface ExecutePythonSettings {
     pythonPath: string;
     showCodeInPreview: boolean;
     showExitCode: boolean;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: ExecutePythonSettings = {
     pythonPath: 'python',
     showCodeInPreview: true,
     showExitCode: false
 }
 
-export default class MyPlugin extends Plugin {
-    settings: MyPluginSettings;
+export default class ExecutePython extends Plugin {
+    settings: ExecutePythonSettings;
 
     async onload() {
         await this.loadSettings();
@@ -22,20 +22,18 @@ export default class MyPlugin extends Plugin {
         this.addSettingTab(new MyPluginSettingTab(this.app, this));
 
         this.registerMarkdownCodeBlockProcessor('python', this.processPythonCodeBlock.bind(this));
-
-        this.registerEvent(
-            this.app.workspace.on('markdown-preview-render', this.addRunButtons.bind(this))
-        );
     }
 
     processPythonCodeBlock(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
         let noInput = source.includes("#noinput");
 	source = source.replace("#noinput\n", "");
-	source = source.replace("#noinput", "");        
+	source = source.replace("#noinput", "");
 
-	if (this.settings.showCodeInPreview) {
+        if (this.settings.showCodeInPreview) {
             let codeBlock = el.createEl('pre');
-            codeBlock.innerHTML = `<code class="language-python">${source}</code>`;
+            let codeElement = codeBlock.createEl('code');
+            codeElement.className = "language-python";
+            codeElement.textContent = source;
         }
 
         const outputArea = el.createEl('div', { cls: 'python-output', attr: {style: 'white-space: pre-wrap;'} });
@@ -48,9 +46,11 @@ export default class MyPlugin extends Plugin {
             let noInput = block.textContent.includes("#noinput");
             if (this.settings.showCodeInPreview) {
                 let codeBlock = block.createEl('pre');
-                codeBlock.innerHTML = block.innerHTML;
+                let codeElement = codeBlock.createEl('code');
+                codeElement.className = "language-python";
+                codeElement.textContent = block.textContent;
             }
-            
+
             const source = block.querySelector('code')?.textContent || '';
             const outputArea = block.createEl('div', { cls: 'python-output', attr: {style: 'white-space: pre-wrap;'} });
 
@@ -59,7 +59,7 @@ export default class MyPlugin extends Plugin {
     }
 
     async runPythonCode(source: string, outputArea: HTMLElement, noInput: boolean = false) {
-        outputArea.innerHTML = '';  // Clear the output area before each run
+        outputArea.textContent = '';  // Clear the output area before each run
 
         let inputField;
         let submitButton;
@@ -152,9 +152,9 @@ export default class MyPlugin extends Plugin {
 }
 
 class MyPluginSettingTab extends PluginSettingTab {
-    plugin: MyPlugin;
+    plugin: ExecutePython;
 
-    constructor(app: App, plugin: MyPlugin) {
+    constructor(app: App, plugin: ExecutePython) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -163,9 +163,6 @@ class MyPluginSettingTab extends PluginSettingTab {
         let {containerEl} = this;
 
         containerEl.empty();
-
-        containerEl.createEl('h2', {text: 'Execute Python Settings'});
-
         new Setting(containerEl)
             .setName('Python')
             .setDesc('The command used to invoke Python on your system. (ex. python or python3)')
